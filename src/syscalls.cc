@@ -235,7 +235,7 @@ Handle<Value> Read(const Arguments& args) {
     return SYS_ERROR();
   }
   
-  Local<String> str = String::New(buf);
+  Local<String> str = String::New(buf, ret);
   free(buf);
   
   HandleScope scope;
