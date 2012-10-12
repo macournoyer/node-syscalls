@@ -17,11 +17,16 @@ describe('syscalls', function() {
   });
   
   it('should select', function() {
-    var fds = syscalls.select([], [], [], 1);
+    var fds = syscalls.select([], [], [], 0);
     assert.equal(3, fds.length);
     assert.equal(0, fds[0].length);
     assert.equal(0, fds[1].length);
     assert.equal(0, fds[2].length);
+  });
+  
+  it('should select without timeout', function() {
+    var fds = syscalls.select([], [1], []);
+    assert.equal(3, fds.length);
   });
   
   it('should accept', function() {

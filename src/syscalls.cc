@@ -145,12 +145,13 @@ Handle<Value> Accept(const Arguments& args) {
 }
 
 Handle<Value> Select(const Arguments& args) {
-  if (args.Length() != 4) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting [readables], [writable], [exceptionals], timeout.");
+  if (args.Length() < 3 || args.Length() > 4) {
+    return TYPE_ERROR("Wrong number of arguments. Expecting readables, writables, exceptionals[, timeout].");
   }
 
-  if (!args[0]->IsArray() || !args[1]->IsArray() || !args[2]->IsArray() || !args[3]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of arguments. Expecting array, array, array, number");
+  if (!args[0]->IsArray() || !args[1]->IsArray() || !args[2]->IsArray() ||
+      (args.Length() == 4 && !args[3]->IsNumber())) {
+    return TYPE_ERROR("Wrong type of arguments. Expecting array, array, array[, number]");
   }
   
   int nfds = 0; // Max fd+1 to watch
@@ -168,10 +169,13 @@ Handle<Value> Select(const Arguments& args) {
     }
   }
   
-  // Set the timeout (in sec) unless == 0
+  // Set the timeout (in sec)
   struct timeval timeout, *timeoutp = 0;
-  timeout.tv_usec = 0;
-  if ((timeout.tv_sec = args[3]->NumberValue()) > 0) timeoutp = &timeout;
+  if (args.Length() == 4) {
+    timeout.tv_usec = 0;
+    timeout.tv_sec = args[3]->NumberValue();
+    timeoutp = &timeout;
+  }
   
   // Make the call!
   int ret = select(nfds, &fds[0], &fds[1], &fds[2], timeoutp);
