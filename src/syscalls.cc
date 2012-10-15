@@ -178,7 +178,10 @@ Handle<Value> Select(const Arguments& args) {
   }
   
   // Make the call!
-  int ret = select(nfds, &fds[0], &fds[1], &fds[2], timeoutp);
+  // EINTR error means it got interupted by a process signal. We simply retry.
+  int ret;
+  while ((ret = select(nfds, &fds[0], &fds[1], &fds[2], timeoutp)) == -1 &&
+         errno == EINTR) continue;
   if (ret < 0) return SYS_ERROR();
   
   // Convert the modified sets to arrays.
