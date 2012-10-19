@@ -250,7 +250,7 @@ Handle<Value> Read(const Arguments& args) {
 }
 
 Handle<Value> Write(const Arguments& args) {
-  if (args.Length() != 2) {
+  if (args.Length() < 2 || args.Length() > 3) {
     return TYPE_ERROR("Wrong number of arguments. Expecting FD, data.");
   }
 
@@ -282,6 +282,26 @@ Handle<Value> Getpid(const Arguments& args) {
   return scope.Close(Number::New(getpid()));
 }
 
+Handle<Value> Open(const Arguments& args) {
+  if (args.Length() != 2) {
+    return TYPE_ERROR("Wrong number of arguments. Expecting path, flags.");
+  }
+
+  if (!args[0]->IsString() || !args[1]->IsNumber()) {
+    return TYPE_ERROR("Wrong type of argument. Expecting string, number.");
+  }
+  
+  Local<String> str = args[0]->ToString();
+  String::AsciiValue path(str);
+  int flags = args[1]->NumberValue();
+  
+  int fd = open(*path, flags);
+  if (fd < 0) return SYS_ERROR();
+  
+  HandleScope scope;
+  return scope.Close(Number::New(fd));
+}
+
 
 void init(Handle<Object> target) {
   target->Set(String::NewSymbol("socket"), FunctionTemplate::New(Socket)->GetFunction());
@@ -296,6 +316,7 @@ void init(Handle<Object> target) {
   target->Set(String::NewSymbol("write"), FunctionTemplate::New(Write)->GetFunction());
   target->Set(String::NewSymbol("fork"), FunctionTemplate::New(Fork)->GetFunction());
   target->Set(String::NewSymbol("getpid"), FunctionTemplate::New(Getpid)->GetFunction());
+  target->Set(String::NewSymbol("open"), FunctionTemplate::New(Open)->GetFunction());
   
   // Constants
   // socket(2) options
@@ -307,5 +328,9 @@ void init(Handle<Object> target) {
   // fcntl(2) options
   target->Set(String::NewSymbol("F_SETFL"), Number::New(F_SETFL));
   target->Set(String::NewSymbol("O_NONBLOCK"), Number::New(O_NONBLOCK));
+  // open(2) flags
+  target->Set(String::NewSymbol("O_RDONLY"), Number::New(O_RDONLY));
+  target->Set(String::NewSymbol("O_WRONLY"), Number::New(O_WRONLY));
+  target->Set(String::NewSymbol("O_RDWR"), Number::New(O_RDWR));
 }
 NODE_MODULE(syscalls, init)
