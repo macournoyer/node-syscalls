@@ -327,6 +327,7 @@ void init(Handle<Object> target) {
   target->Set(String::NewSymbol("SOCK_DGRAM"), Number::New(SOCK_DGRAM));
   // fcntl(2) options
   target->Set(String::NewSymbol("F_SETFL"), Number::New(F_SETFL));
+  target->Set(String::NewSymbol("F_GETFL"), Number::New(F_GETFL));
   target->Set(String::NewSymbol("O_NONBLOCK"), Number::New(O_NONBLOCK));
   // open(2) flags
   target->Set(String::NewSymbol("O_RDONLY"), Number::New(O_RDONLY));
