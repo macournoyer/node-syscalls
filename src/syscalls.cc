@@ -283,6 +283,25 @@ Handle<Value> Getpid(const Arguments& args) {
   return scope.Close(Number::New(getpid()));
 }
 
+Handle<Value> Waitpid(const Arguments& args) {
+  pid_t pid = -1; // Default to waiting for all child processes.
+  if (args.Length() >= 1) {
+    pid = args[0]->NumberValue();
+  }
+  
+  int options = 0;
+  if (args.Length() >= 2) {
+    options = args[1]->NumberValue();
+  }
+    
+  int status;
+  
+  int ret = waitpid(pid, &status, options);
+  if (ret < 0) return SYS_ERROR();
+  
+  return Undefined();
+}
+
 Handle<Value> Open(const Arguments& args) {
   if (args.Length() != 2) {
     return TYPE_ERROR("Wrong number of arguments. Expecting path, flags.");
@@ -317,6 +336,7 @@ void init(Handle<Object> target) {
   target->Set(String::NewSymbol("write"), FunctionTemplate::New(Write)->GetFunction());
   target->Set(String::NewSymbol("fork"), FunctionTemplate::New(Fork)->GetFunction());
   target->Set(String::NewSymbol("getpid"), FunctionTemplate::New(Getpid)->GetFunction());
+  target->Set(String::NewSymbol("waitpid"), FunctionTemplate::New(Waitpid)->GetFunction());
   target->Set(String::NewSymbol("open"), FunctionTemplate::New(Open)->GetFunction());
   
   // Constants
