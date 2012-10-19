@@ -55,7 +55,8 @@ Handle<Value> Fcntl(const Arguments& args) {
   int ret = fcntl(fd, cmd, val);
   if (ret < 0) return SYS_ERROR();
   
-  return Undefined();
+  HandleScope scope;
+  return scope.Close(Number::New(ret));
 }
 
 Handle<Value> Connect(const Arguments& args) {
