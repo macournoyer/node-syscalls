@@ -4,5 +4,8 @@
   "author"        : "Marc-Andre Cournoyer <macournoyer@gmail.com>",
   "version"       : "0.0.9",
   "main"          : "./build/Release/syscalls",
-  "engines"       : { "node": ">=0.8.0" }
+  "engines"       : { "node": ">=0.8.0" },
+  "dependencies"  : {
+    "nan": "^0.8.0"
+  }
 }

@@ -1,5 +1,6 @@
 #include <node.h>
-#include <v8.h>
+#include "nan.h"
+
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <unistd.h>
@@ -11,19 +12,17 @@
 
 using namespace v8;
 
-#define TYPE_ERROR(msg) \
-    ThrowException(Exception::TypeError(String::New(msg)))
+#define SYS_ERROR() NanThrowError(strerror(errno))
 
-#define SYS_ERROR() \
-    ThrowException(Exception::Error(String::New(strerror(errno))))
+NAN_METHOD(Socket) {
+  NanScope();
 
-Handle<Value> Socket(const Arguments& args) {
   if (args.Length() != 3) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting domain, type, protocol.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting domain, type, protocol.");
   }
 
   if (!args[0]->IsNumber() || !args[1]->IsNumber() || !args[2]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of arguments. Expecting numbers");
+    return NanThrowTypeError("Wrong type of arguments. Expecting numbers");
   }
   
   int domain = args[0]->NumberValue();
@@ -37,17 +36,18 @@ Handle<Value> Socket(const Arguments& args) {
   int ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &sock_flags, sizeof(sock_flags));
   if (ret < 0) return SYS_ERROR();
   
-  HandleScope scope;
-  return scope.Close(Number::New(fd));
+  NanReturnValue(Number::New(fd));
 }
 
-Handle<Value> Fcntl(const Arguments& args) {
+NAN_METHOD(Fcntl) {
+  NanScope();
+
   if (args.Length() != 3) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD, command, value.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD, command, value.");
   }
 
   if (!args[0]->IsNumber() || !args[1]->IsNumber() || !args[2]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of arguments. Expecting numbers");
+    return NanThrowTypeError("Wrong type of arguments. Expecting numbers");
   }
   
   int fd = args[0]->NumberValue();
@@ -57,17 +57,18 @@ Handle<Value> Fcntl(const Arguments& args) {
   int ret = fcntl(fd, cmd, val);
   if (ret < 0) return SYS_ERROR();
   
-  HandleScope scope;
-  return scope.Close(Number::New(ret));
+  NanReturnValue(Number::New(ret));
 }
 
-Handle<Value> Connect(const Arguments& args) {
+NAN_METHOD(Connect) {
+  NanScope();
+
   if (args.Length() != 3) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD, port, address.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD, port, address.");
   }
 
   if (!args[0]->IsNumber() || !args[1]->IsNumber() || !args[2]->IsString()) {
-    return TYPE_ERROR("Wrong type of arguments. Expecting number, number, string");
+    return NanThrowTypeError("Wrong type of arguments. Expecting number, number, string");
   }
   
   int fd = args[0]->NumberValue();
@@ -82,16 +83,18 @@ Handle<Value> Connect(const Arguments& args) {
   int ret = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0 && errno != EINPROGRESS) return SYS_ERROR();
   
-  return Undefined();
+  NanReturnUndefined();
 }
 
-Handle<Value> Bind(const Arguments& args) {
+NAN_METHOD(Bind) {
+  NanScope();
+
   if (args.Length() != 3) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD, port, address.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD, port, address.");
   }
 
   if (!args[0]->IsNumber() || !args[1]->IsNumber() || !args[2]->IsString()) {
-    return TYPE_ERROR("Wrong type of arguments. Expecting number, number, string");
+    return NanThrowTypeError("Wrong type of arguments. Expecting number, number, string");
   }
   
   int fd = args[0]->NumberValue();
@@ -106,16 +109,18 @@ Handle<Value> Bind(const Arguments& args) {
   int ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) return SYS_ERROR();
   
-  return Undefined();
+  NanReturnUndefined();
 }
 
-Handle<Value> Listen(const Arguments& args) {
+NAN_METHOD(Listen) {
+  NanScope();
+
   if (args.Length() != 2) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD, backlog");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD, backlog");
   }
 
   if (!args[0]->IsNumber() || !args[1]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of argument. Expecting number, number");
+    return NanThrowTypeError("Wrong type of argument. Expecting number, number");
   }
   
   int fd = args[0]->NumberValue();
@@ -124,16 +129,18 @@ Handle<Value> Listen(const Arguments& args) {
   int ret = listen(fd, backlog);
   if (ret < 0) return SYS_ERROR();
   
-  return Undefined();
+  NanReturnUndefined();
 }
 
-Handle<Value> Accept(const Arguments& args) {
+NAN_METHOD(Accept) {
+  NanScope();
+
   if (args.Length() != 1) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD.");
   }
 
   if (!args[0]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of argument. Expecting number");
+    return NanThrowTypeError("Wrong type of argument. Expecting number");
   }
   
   int fd = args[0]->NumberValue();
@@ -143,18 +150,19 @@ Handle<Value> Accept(const Arguments& args) {
   int cfd = accept(fd, &addr, &size);
   if (cfd < 0) return SYS_ERROR();
   
-  HandleScope scope;
-  return scope.Close(Number::New(cfd));
+  NanReturnValue(Number::New(cfd));
 }
 
-Handle<Value> Select(const Arguments& args) {
+NAN_METHOD(Select) {
+  NanScope();
+
   if (args.Length() < 3 || args.Length() > 4) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting readables, writables, exceptionals[, timeout].");
+    return NanThrowTypeError("Wrong number of arguments. Expecting readables, writables, exceptionals[, timeout].");
   }
 
   if (!args[0]->IsArray() || !args[1]->IsArray() || !args[2]->IsArray() ||
       (args.Length() == 4 && !args[3]->IsNumber())) {
-    return TYPE_ERROR("Wrong type of arguments. Expecting array, array, array[, number]");
+    return NanThrowTypeError("Wrong type of arguments. Expecting array, array, array[, number]");
   }
   
   int nfds = 0; // Max fd+1 to watch
@@ -201,21 +209,23 @@ Handle<Value> Select(const Arguments& args) {
     }
   }
   
-  HandleScope scope;
   Local<Array> retarray = Array::New(3);
   retarray->Set(0, retfds[0]);
   retarray->Set(1, retfds[1]);
   retarray->Set(2, retfds[2]);
-  return scope.Close(retarray);
+
+  NanReturnValue(retarray);
 }
 
-Handle<Value> Close(const Arguments& args) {
+NAN_METHOD(Close) {
+  NanScope();
+
   if (args.Length() != 1) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD.");
   }
 
   if (!args[0]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of argument. Expecting number");
+    return NanThrowTypeError("Wrong type of argument. Expecting number");
   }
   
   int fd = args[0]->NumberValue();
@@ -223,16 +233,18 @@ Handle<Value> Close(const Arguments& args) {
   int ret = close(fd);
   if (ret < 0) return SYS_ERROR();
   
-  return Undefined();
+  NanReturnUndefined();
 }
 
-Handle<Value> Read(const Arguments& args) {
+NAN_METHOD(Read) {
+  NanScope();
+
   if (args.Length() != 2) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD, number of bytes.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD, number of bytes.");
   }
 
   if (!args[0]->IsNumber() || !args[0]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of argument. Expecting number, number.");
+    return NanThrowTypeError("Wrong type of argument. Expecting number, number.");
   }
   
   int fd = args[0]->NumberValue();
@@ -248,17 +260,18 @@ Handle<Value> Read(const Arguments& args) {
   Local<String> str = String::New(buf, ret);
   free(buf);
   
-  HandleScope scope;
-  return scope.Close(str);
+  NanReturnValue(str);
 }
 
-Handle<Value> Write(const Arguments& args) {
+NAN_METHOD(Write) {
+  NanScope();
+
   if (args.Length() < 2 || args.Length() > 3) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting FD, data.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting FD, data.");
   }
 
   if (!args[0]->IsNumber() || !args[1]->IsString()) {
-    return TYPE_ERROR("Wrong type of argument. Expecting number, string.");
+    return NanThrowTypeError("Wrong type of argument. Expecting number, string.");
   }
   
   int fd = args[0]->NumberValue();
@@ -269,23 +282,27 @@ Handle<Value> Write(const Arguments& args) {
   int ret = write(fd, *buf, nbyte);
   if (ret < 0) return SYS_ERROR();
   
-  return Undefined();
+  NanReturnUndefined();
 }
 
-Handle<Value> Fork(const Arguments& args) {
+NAN_METHOD(Fork) {
+  NanScope();
+
   int ret = fork();
   if (ret < 0) return SYS_ERROR();
   
-  HandleScope scope;
-  return scope.Close(Number::New(ret));
+  NanReturnValue(Number::New(ret));
 }
 
-Handle<Value> Getpid(const Arguments& args) {
-  HandleScope scope;
-  return scope.Close(Number::New(getpid()));
+NAN_METHOD(Getpid) {
+  NanScope();
+
+  NanReturnValue(Number::New(getpid()));
 }
 
-Handle<Value> Waitpid(const Arguments& args) {
+NAN_METHOD(Waitpid) {
+  NanScope();
+
   pid_t pid = -1; // Default to waiting for all child processes.
   if (args.Length() >= 1) {
     pid = args[0]->NumberValue();
@@ -301,16 +318,18 @@ Handle<Value> Waitpid(const Arguments& args) {
   int ret = waitpid(pid, &status, options);
   if (ret < 0) return SYS_ERROR();
   
-  return Undefined();
+  NanReturnUndefined();
 }
 
-Handle<Value> Open(const Arguments& args) {
+NAN_METHOD(Open) {
+  NanScope();
+
   if (args.Length() != 2) {
-    return TYPE_ERROR("Wrong number of arguments. Expecting path, flags.");
+    return NanThrowTypeError("Wrong number of arguments. Expecting path, flags.");
   }
 
   if (!args[0]->IsString() || !args[1]->IsNumber()) {
-    return TYPE_ERROR("Wrong type of argument. Expecting string, number.");
+    return NanThrowTypeError("Wrong type of argument. Expecting string, number.");
   }
   
   Local<String> str = args[0]->ToString();
@@ -320,41 +339,40 @@ Handle<Value> Open(const Arguments& args) {
   int fd = open(*path, flags);
   if (fd < 0) return SYS_ERROR();
   
-  HandleScope scope;
-  return scope.Close(Number::New(fd));
+  NanReturnValue(Number::New(fd));
 }
 
 
 void init(Handle<Object> target) {
-  target->Set(String::NewSymbol("socket"), FunctionTemplate::New(Socket)->GetFunction());
-  target->Set(String::NewSymbol("fcntl"), FunctionTemplate::New(Fcntl)->GetFunction());
-  target->Set(String::NewSymbol("connect"), FunctionTemplate::New(Connect)->GetFunction());
-  target->Set(String::NewSymbol("bind"), FunctionTemplate::New(Bind)->GetFunction());
-  target->Set(String::NewSymbol("listen"), FunctionTemplate::New(Listen)->GetFunction());
-  target->Set(String::NewSymbol("accept"), FunctionTemplate::New(Accept)->GetFunction());
-  target->Set(String::NewSymbol("select"), FunctionTemplate::New(Select)->GetFunction());
-  target->Set(String::NewSymbol("close"), FunctionTemplate::New(Close)->GetFunction());
-  target->Set(String::NewSymbol("read"), FunctionTemplate::New(Read)->GetFunction());
-  target->Set(String::NewSymbol("write"), FunctionTemplate::New(Write)->GetFunction());
-  target->Set(String::NewSymbol("fork"), FunctionTemplate::New(Fork)->GetFunction());
-  target->Set(String::NewSymbol("getpid"), FunctionTemplate::New(Getpid)->GetFunction());
-  target->Set(String::NewSymbol("waitpid"), FunctionTemplate::New(Waitpid)->GetFunction());
-  target->Set(String::NewSymbol("open"), FunctionTemplate::New(Open)->GetFunction());
+  target->Set(NanSymbol("socket"), FunctionTemplate::New(Socket)->GetFunction());
+  target->Set(NanSymbol("fcntl"), FunctionTemplate::New(Fcntl)->GetFunction());
+  target->Set(NanSymbol("connect"), FunctionTemplate::New(Connect)->GetFunction());
+  target->Set(NanSymbol("bind"), FunctionTemplate::New(Bind)->GetFunction());
+  target->Set(NanSymbol("listen"), FunctionTemplate::New(Listen)->GetFunction());
+  target->Set(NanSymbol("accept"), FunctionTemplate::New(Accept)->GetFunction());
+  target->Set(NanSymbol("select"), FunctionTemplate::New(Select)->GetFunction());
+  target->Set(NanSymbol("close"), FunctionTemplate::New(Close)->GetFunction());
+  target->Set(NanSymbol("read"), FunctionTemplate::New(Read)->GetFunction());
+  target->Set(NanSymbol("write"), FunctionTemplate::New(Write)->GetFunction());
+  target->Set(NanSymbol("fork"), FunctionTemplate::New(Fork)->GetFunction());
+  target->Set(NanSymbol("getpid"), FunctionTemplate::New(Getpid)->GetFunction());
+  target->Set(NanSymbol("waitpid"), FunctionTemplate::New(Waitpid)->GetFunction());
+  target->Set(NanSymbol("open"), FunctionTemplate::New(Open)->GetFunction());
   
   // Constants
   // socket(2) options
-  target->Set(String::NewSymbol("AF_INET"), Number::New(AF_INET));
-  target->Set(String::NewSymbol("AF_UNIX"), Number::New(AF_UNIX));
-  target->Set(String::NewSymbol("AF_INET6"), Number::New(AF_INET6));
-  target->Set(String::NewSymbol("SOCK_STREAM"), Number::New(SOCK_STREAM));
-  target->Set(String::NewSymbol("SOCK_DGRAM"), Number::New(SOCK_DGRAM));
+  target->Set(NanSymbol("AF_INET"), Number::New(AF_INET));
+  target->Set(NanSymbol("AF_UNIX"), Number::New(AF_UNIX));
+  target->Set(NanSymbol("AF_INET6"), Number::New(AF_INET6));
+  target->Set(NanSymbol("SOCK_STREAM"), Number::New(SOCK_STREAM));
+  target->Set(NanSymbol("SOCK_DGRAM"), Number::New(SOCK_DGRAM));
   // fcntl(2) options
-  target->Set(String::NewSymbol("F_SETFL"), Number::New(F_SETFL));
-  target->Set(String::NewSymbol("F_GETFL"), Number::New(F_GETFL));
-  target->Set(String::NewSymbol("O_NONBLOCK"), Number::New(O_NONBLOCK));
+  target->Set(NanSymbol("F_SETFL"), Number::New(F_SETFL));
+  target->Set(NanSymbol("F_GETFL"), Number::New(F_GETFL));
+  target->Set(NanSymbol("O_NONBLOCK"), Number::New(O_NONBLOCK));
   // open(2) flags
-  target->Set(String::NewSymbol("O_RDONLY"), Number::New(O_RDONLY));
-  target->Set(String::NewSymbol("O_WRONLY"), Number::New(O_WRONLY));
-  target->Set(String::NewSymbol("O_RDWR"), Number::New(O_RDWR));
+  target->Set(NanSymbol("O_RDONLY"), Number::New(O_RDONLY));
+  target->Set(NanSymbol("O_WRONLY"), Number::New(O_WRONLY));
+  target->Set(NanSymbol("O_RDWR"), Number::New(O_RDWR));
 }
 NODE_MODULE(syscalls, init)
