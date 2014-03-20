@@ -2,7 +2,7 @@
   "name"          : "syscalls",
   "description"   : "Node wrapper to some UNIX syscalls. Used to during http://truthabouteventloops.com/.",
   "author"        : "Marc-Andre Cournoyer <macournoyer@gmail.com>",
-  "version"       : "0.0.9",
+  "version"       : "1.0.0",
   "main"          : "./build/Release/syscalls",
   "engines"       : { "node": ">=0.8.0" },
   "dependencies"  : {
