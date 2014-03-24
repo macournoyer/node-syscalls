@@ -147,7 +147,8 @@ NAN_METHOD(Accept) {
   
   struct sockaddr addr;
   socklen_t size = sizeof(addr);
-  int cfd = accept(fd, &addr, &size);
+  int cfd;
+  while ((cfd = accept(fd, &addr, &size)) == -1 && errno == EINTR) continue;
   if (cfd < 0) return SYS_ERROR();
   
   NanReturnValue(Number::New(cfd));
