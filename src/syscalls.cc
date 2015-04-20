@@ -36,7 +36,7 @@ NAN_METHOD(Socket) {
   int ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &sock_flags, sizeof(sock_flags));
   if (ret < 0) return SYS_ERROR();
   
-  NanReturnValue(Number::New(fd));
+  NanReturnValue(NanNew<Number>(fd));
 }
 
 NAN_METHOD(Fcntl) {
@@ -57,7 +57,7 @@ NAN_METHOD(Fcntl) {
   int ret = fcntl(fd, cmd, val);
   if (ret < 0) return SYS_ERROR();
   
-  NanReturnValue(Number::New(ret));
+  NanReturnValue(NanNew<Number>(ret));
 }
 
 NAN_METHOD(Connect) {
@@ -73,8 +73,7 @@ NAN_METHOD(Connect) {
   
   int fd = args[0]->NumberValue();
   int port = args[1]->NumberValue();
-  Local<String> addrString = args[2]->ToString();
-  String::AsciiValue addr_str(addrString);
+  NanAsciiString addr_str(args[2]);
   
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -99,8 +98,7 @@ NAN_METHOD(Bind) {
   
   int fd = args[0]->NumberValue();
   int port = args[1]->NumberValue();
-  Local<String> addrString = args[2]->ToString();
-  String::AsciiValue addr_str(addrString);
+  NanAsciiString addr_str(args[2]);
   
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -151,7 +149,7 @@ NAN_METHOD(Accept) {
   while ((cfd = accept(fd, &addr, &size)) == -1 && errno == EINTR) continue;
   if (cfd < 0) return SYS_ERROR();
   
-  NanReturnValue(Number::New(cfd));
+  NanReturnValue(NanNew<Number>(cfd));
 }
 
 NAN_METHOD(Select) {
@@ -200,17 +198,17 @@ NAN_METHOD(Select) {
   Local<Array> retfds[3];
   for(set_i = 0; set_i < 3; ++set_i) {
     unsigned ret_i = 0;
-    retfds[set_i] = Array::New();
+    retfds[set_i] = NanNew<Array>();
     Handle<Array> array = Handle<Array>::Cast(args[set_i]);
     for(i = 0; i < array->Length(); ++i) {
       int fd = array->Get(i)->NumberValue();
       if (FD_ISSET(fd, &fds[set_i])) {
-        retfds[set_i]->Set(ret_i++, Number::New(fd));
+        retfds[set_i]->Set(ret_i++, NanNew<Number>(fd));
       }
     }
   }
   
-  Local<Array> retarray = Array::New(3);
+  Local<Array> retarray = NanNew<Array>(3);
   retarray->Set(0, retfds[0]);
   retarray->Set(1, retfds[1]);
   retarray->Set(2, retfds[2]);
@@ -258,7 +256,7 @@ NAN_METHOD(Read) {
     return SYS_ERROR();
   }
   
-  Local<String> str = String::New(buf, ret);
+  Local<String> str = NanNew<String>(buf, ret);
   free(buf);
   
   NanReturnValue(str);
@@ -277,7 +275,7 @@ NAN_METHOD(Write) {
   
   int fd = args[0]->NumberValue();
   Local<String> str = args[1]->ToString();
-  String::AsciiValue buf(str);
+  NanAsciiString buf(args[1]);
   int nbyte = str->Length();
   
   int ret = write(fd, *buf, nbyte);
@@ -292,13 +290,13 @@ NAN_METHOD(Fork) {
   int ret = fork();
   if (ret < 0) return SYS_ERROR();
   
-  NanReturnValue(Number::New(ret));
+  NanReturnValue(NanNew<Number>(ret));
 }
 
 NAN_METHOD(Getpid) {
   NanScope();
 
-  NanReturnValue(Number::New(getpid()));
+  NanReturnValue(NanNew<Number>(getpid()));
 }
 
 NAN_METHOD(Waitpid) {
@@ -333,47 +331,46 @@ NAN_METHOD(Open) {
     return NanThrowTypeError("Wrong type of argument. Expecting string, number.");
   }
   
-  Local<String> str = args[0]->ToString();
-  String::AsciiValue path(str);
+  NanAsciiString path(args[0]);
   int flags = args[1]->NumberValue();
   
   int fd = open(*path, flags);
   if (fd < 0) return SYS_ERROR();
   
-  NanReturnValue(Number::New(fd));
+  NanReturnValue(NanNew<Number>(fd));
 }
 
 
 void init(Handle<Object> target) {
-  target->Set(NanSymbol("socket"), FunctionTemplate::New(Socket)->GetFunction());
-  target->Set(NanSymbol("fcntl"), FunctionTemplate::New(Fcntl)->GetFunction());
-  target->Set(NanSymbol("connect"), FunctionTemplate::New(Connect)->GetFunction());
-  target->Set(NanSymbol("bind"), FunctionTemplate::New(Bind)->GetFunction());
-  target->Set(NanSymbol("listen"), FunctionTemplate::New(Listen)->GetFunction());
-  target->Set(NanSymbol("accept"), FunctionTemplate::New(Accept)->GetFunction());
-  target->Set(NanSymbol("select"), FunctionTemplate::New(Select)->GetFunction());
-  target->Set(NanSymbol("close"), FunctionTemplate::New(Close)->GetFunction());
-  target->Set(NanSymbol("read"), FunctionTemplate::New(Read)->GetFunction());
-  target->Set(NanSymbol("write"), FunctionTemplate::New(Write)->GetFunction());
-  target->Set(NanSymbol("fork"), FunctionTemplate::New(Fork)->GetFunction());
-  target->Set(NanSymbol("getpid"), FunctionTemplate::New(Getpid)->GetFunction());
-  target->Set(NanSymbol("waitpid"), FunctionTemplate::New(Waitpid)->GetFunction());
-  target->Set(NanSymbol("open"), FunctionTemplate::New(Open)->GetFunction());
+  target->Set(NanNew<String>("socket"), NanNew<FunctionTemplate>(Socket)->GetFunction());
+  target->Set(NanNew<String>("fcntl"), NanNew<FunctionTemplate>(Fcntl)->GetFunction());
+  target->Set(NanNew<String>("connect"), NanNew<FunctionTemplate>(Connect)->GetFunction());
+  target->Set(NanNew<String>("bind"), NanNew<FunctionTemplate>(Bind)->GetFunction());
+  target->Set(NanNew<String>("listen"), NanNew<FunctionTemplate>(Listen)->GetFunction());
+  target->Set(NanNew<String>("accept"), NanNew<FunctionTemplate>(Accept)->GetFunction());
+  target->Set(NanNew<String>("select"), NanNew<FunctionTemplate>(Select)->GetFunction());
+  target->Set(NanNew<String>("close"), NanNew<FunctionTemplate>(Close)->GetFunction());
+  target->Set(NanNew<String>("read"), NanNew<FunctionTemplate>(Read)->GetFunction());
+  target->Set(NanNew<String>("write"), NanNew<FunctionTemplate>(Write)->GetFunction());
+  target->Set(NanNew<String>("fork"), NanNew<FunctionTemplate>(Fork)->GetFunction());
+  target->Set(NanNew<String>("getpid"), NanNew<FunctionTemplate>(Getpid)->GetFunction());
+  target->Set(NanNew<String>("waitpid"), NanNew<FunctionTemplate>(Waitpid)->GetFunction());
+  target->Set(NanNew<String>("open"), NanNew<FunctionTemplate>(Open)->GetFunction());
   
   // Constants
   // socket(2) options
-  target->Set(NanSymbol("AF_INET"), Number::New(AF_INET));
-  target->Set(NanSymbol("AF_UNIX"), Number::New(AF_UNIX));
-  target->Set(NanSymbol("AF_INET6"), Number::New(AF_INET6));
-  target->Set(NanSymbol("SOCK_STREAM"), Number::New(SOCK_STREAM));
-  target->Set(NanSymbol("SOCK_DGRAM"), Number::New(SOCK_DGRAM));
+  target->Set(NanNew<String>("AF_INET"), NanNew<Number>(AF_INET));
+  target->Set(NanNew<String>("AF_UNIX"), NanNew<Number>(AF_UNIX));
+  target->Set(NanNew<String>("AF_INET6"), NanNew<Number>(AF_INET6));
+  target->Set(NanNew<String>("SOCK_STREAM"), NanNew<Number>(SOCK_STREAM));
+  target->Set(NanNew<String>("SOCK_DGRAM"), NanNew<Number>(SOCK_DGRAM));
   // fcntl(2) options
-  target->Set(NanSymbol("F_SETFL"), Number::New(F_SETFL));
-  target->Set(NanSymbol("F_GETFL"), Number::New(F_GETFL));
-  target->Set(NanSymbol("O_NONBLOCK"), Number::New(O_NONBLOCK));
+  target->Set(NanNew<String>("F_SETFL"), NanNew<Number>(F_SETFL));
+  target->Set(NanNew<String>("F_GETFL"), NanNew<Number>(F_GETFL));
+  target->Set(NanNew<String>("O_NONBLOCK"), NanNew<Number>(O_NONBLOCK));
   // open(2) flags
-  target->Set(NanSymbol("O_RDONLY"), Number::New(O_RDONLY));
-  target->Set(NanSymbol("O_WRONLY"), Number::New(O_WRONLY));
-  target->Set(NanSymbol("O_RDWR"), Number::New(O_RDWR));
+  target->Set(NanNew<String>("O_RDONLY"), NanNew<Number>(O_RDONLY));
+  target->Set(NanNew<String>("O_WRONLY"), NanNew<Number>(O_WRONLY));
+  target->Set(NanNew<String>("O_RDWR"), NanNew<Number>(O_RDWR));
 }
 NODE_MODULE(syscalls, init)
