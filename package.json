@@ -6,6 +6,6 @@
   "main"          : "./build/Release/syscalls",
   "engines"       : { "node": ">=0.8.0" },
   "dependencies"  : {
-    "nan": "~1.9.0"
+    "nan": "~2.1.0"
   }
 }
