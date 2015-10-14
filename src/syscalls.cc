@@ -13,6 +13,10 @@
 using namespace v8;
 
 #define SYS_ERROR() Nan::ThrowError(strerror(errno))
+#define TO_CSTRING(val, cstr) \
+  cstr = (char *) malloc((val)->Length() + 1); \
+  cstr[(val)->Length()] = '\0'; \
+  Nan::DecodeWrite(cstr, (val)->Length(), (val));
 
 NAN_METHOD(Socket) {
   if (info.Length() != 3) {
@@ -67,13 +71,18 @@ NAN_METHOD(Connect) {
   
   int fd = info[0]->NumberValue();
   int port = info[1]->NumberValue();
-  Nan::AsciiString addr_str(info[2]);
+
+  char *addr_str;
+  TO_CSTRING(info[2]->ToString(), addr_str);
   
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
-  addr.sin_addr.s_addr = inet_addr(*addr_str);
+  addr.sin_addr.s_addr = inet_addr(addr_str);
   int ret = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
+
+  free(addr_str);
+
   if (ret < 0 && errno != EINPROGRESS) return SYS_ERROR();
   
   info.GetReturnValue().SetUndefined();
@@ -90,13 +99,17 @@ NAN_METHOD(Bind) {
   
   int fd = info[0]->NumberValue();
   int port = info[1]->NumberValue();
-  NanAsciiString addr_str(info[2]);
+  char *addr_str;
+  TO_CSTRING(info[2]->ToString(), addr_str);
   
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
-  addr.sin_addr.s_addr = inet_addr(*addr_str);
+  addr.sin_addr.s_addr = inet_addr(addr_str);
   int ret = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+
+  free(addr_str);
+
   if (ret < 0) return SYS_ERROR();
   
   info.GetReturnValue().SetUndefined();
@@ -238,7 +251,7 @@ NAN_METHOD(Read) {
     return SYS_ERROR();
   }
   
-  Local<String> str = Nan::New<String>(buf, ret);
+  Local<Value> str = Nan::Encode(buf, ret);
   free(buf);
   
   info.GetReturnValue().Set(str);
@@ -255,10 +268,14 @@ NAN_METHOD(Write) {
   
   int fd = info[0]->NumberValue();
   Local<String> str = info[1]->ToString();
-  NanAsciiString buf(info[1]);
+  char *buf;
+  TO_CSTRING(str, buf);
   int nbyte = str->Length();
   
-  int ret = write(fd, *buf, nbyte);
+  int ret = write(fd, buf, nbyte);
+
+  free(buf);
+
   if (ret < 0) return SYS_ERROR();
   
   info.GetReturnValue().SetUndefined();
@@ -303,46 +320,58 @@ NAN_METHOD(Open) {
     return Nan::ThrowTypeError("Wrong type of argument. Expecting string, number.");
   }
   
-  NanAsciiString path(info[0]);
+  char *path;
+  TO_CSTRING(info[0]->ToString(), path);
+
   int flags = info[1]->NumberValue();
   
-  int fd = open(*path, flags);
+  int fd = open(path, flags);
+
+  free(path);
+
   if (fd < 0) return SYS_ERROR();
   
   info.GetReturnValue().Set(Nan::New<Number>(fd));
 }
 
+#define SET_FUNCTION(name, func) \
+  Nan::Set(target, Nan::New<String>(name).ToLocalChecked(), \
+    Nan::GetFunction(Nan::New<FunctionTemplate>(func)).ToLocalChecked())
 
-void init(Handle<Object> target) {
-  target->Set(Nan::New<String>("socket"), Nan::New<FunctionTemplate>(Socket)->GetFunction());
-  target->Set(Nan::New<String>("fcntl"), Nan::New<FunctionTemplate>(Fcntl)->GetFunction());
-  target->Set(Nan::New<String>("connect"), Nan::New<FunctionTemplate>(Connect)->GetFunction());
-  target->Set(Nan::New<String>("bind"), Nan::New<FunctionTemplate>(Bind)->GetFunction());
-  target->Set(Nan::New<String>("listen"), Nan::New<FunctionTemplate>(Listen)->GetFunction());
-  target->Set(Nan::New<String>("accept"), Nan::New<FunctionTemplate>(Accept)->GetFunction());
-  target->Set(Nan::New<String>("select"), Nan::New<FunctionTemplate>(Select)->GetFunction());
-  target->Set(Nan::New<String>("close"), Nan::New<FunctionTemplate>(Close)->GetFunction());
-  target->Set(Nan::New<String>("read"), Nan::New<FunctionTemplate>(Read)->GetFunction());
-  target->Set(Nan::New<String>("write"), Nan::New<FunctionTemplate>(Write)->GetFunction());
-  target->Set(Nan::New<String>("fork"), Nan::New<FunctionTemplate>(Fork)->GetFunction());
-  target->Set(Nan::New<String>("getpid"), Nan::New<FunctionTemplate>(Getpid)->GetFunction());
-  target->Set(Nan::New<String>("waitpid"), Nan::New<FunctionTemplate>(Waitpid)->GetFunction());
-  target->Set(Nan::New<String>("open"), Nan::New<FunctionTemplate>(Open)->GetFunction());
+#define SET_CONST(name, val) \
+  Nan::Set(target, Nan::New<String>(name).ToLocalChecked(), \
+    Nan::New<Number>(val))
+
+NAN_MODULE_INIT(InitAll) {
+  SET_FUNCTION("socket", Socket);
+  SET_FUNCTION("fcntl", Fcntl);
+  SET_FUNCTION("connect", Connect);
+  SET_FUNCTION("bind", Bind);
+  SET_FUNCTION("listen", Listen);
+  SET_FUNCTION("accept", Accept);
+  SET_FUNCTION("select", Select);
+  SET_FUNCTION("close", Close);
+  SET_FUNCTION("read", Read);
+  SET_FUNCTION("write", Write);
+  SET_FUNCTION("fork", Fork);
+  SET_FUNCTION("getpid", Getpid);
+  SET_FUNCTION("waitpid", Waitpid);
+  SET_FUNCTION("open", Open);
   
   // Constants
   // socket(2) options
-  target->Set(Nan::New<String>("AF_INET"), Nan::New<Number>(AF_INET));
-  target->Set(Nan::New<String>("AF_UNIX"), Nan::New<Number>(AF_UNIX));
-  target->Set(Nan::New<String>("AF_INET6"), Nan::New<Number>(AF_INET6));
-  target->Set(Nan::New<String>("SOCK_STREAM"), Nan::New<Number>(SOCK_STREAM));
-  target->Set(Nan::New<String>("SOCK_DGRAM"), Nan::New<Number>(SOCK_DGRAM));
+  SET_CONST("AF_INET", AF_INET);
+  SET_CONST("AF_UNIX", AF_UNIX);
+  SET_CONST("AF_INET6", AF_INET6);
+  SET_CONST("SOCK_STREAM", SOCK_STREAM);
+  SET_CONST("SOCK_DGRAM", SOCK_DGRAM);
   // fcntl(2) options
-  target->Set(Nan::New<String>("F_SETFL"), Nan::New<Number>(F_SETFL));
-  target->Set(Nan::New<String>("F_GETFL"), Nan::New<Number>(F_GETFL));
-  target->Set(Nan::New<String>("O_NONBLOCK"), Nan::New<Number>(O_NONBLOCK));
+  SET_CONST("F_SETFL", F_SETFL);
+  SET_CONST("F_GETFL", F_GETFL);
+  SET_CONST("O_NONBLOCK", O_NONBLOCK);
   // open(2) flags
-  target->Set(Nan::New<String>("O_RDONLY"), Nan::New<Number>(O_RDONLY));
-  target->Set(Nan::New<String>("O_WRONLY"), Nan::New<Number>(O_WRONLY));
-  target->Set(Nan::New<String>("O_RDWR"), Nan::New<Number>(O_RDWR));
+  SET_CONST("O_RDONLY", O_RDONLY);
+  SET_CONST("O_WRONLY", O_WRONLY);
+  SET_CONST("O_RDWR", O_RDWR);
 }
-NODE_MODULE(syscalls, init)
+NODE_MODULE(syscalls, InitAll)
